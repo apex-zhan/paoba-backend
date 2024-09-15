@@ -33,9 +33,9 @@ public class InsertUsersTest {
         List<User> userList = new ArrayList<>();
         for (int i = 0; i < INSERT_NUM; i++) {
             User user = new User();
-            user.setUsername("");
+            user.setUserName("");
             user.setUserAccount("");
-            user.setAvatarUrl("https://636f-codenav-8grj8px727565176-1256524210.tcb.qcloud.la/img/logo.png");
+            user.setUserAvatar("https://636f-codenav-8grj8px727565176-1256524210.tcb.qcloud.la/img/logo.png");
             user.setGender(0);
             user.setUserPassword("12345678");
             user.setPhone("123");
@@ -43,7 +43,6 @@ public class InsertUsersTest {
             user.setTags("[]");
             user.setUserStatus(0);
             user.setUserRole(0);
-            user.setPlanetCode("11111111");
             userList.add(user);
         }
         // 20 秒 10 万条
@@ -68,9 +67,9 @@ public class InsertUsersTest {
             while (true) {
                 j++;
                 User user = new User();
-                user.setUsername("");
+                user.setUserName("");
                 user.setUserAccount("");
-                user.setAvatarUrl("https://636f-codenav-8grj8px727565176-1256524210.tcb.qcloud.la/img/logo.png");
+                user.setUserAvatar("https://636f-codenav-8grj8px727565176-1256524210.tcb.qcloud.la/img/logo.png");
                 user.setGender(0);
                 user.setUserPassword("12345678");
                 user.setPhone("123");
@@ -78,7 +77,6 @@ public class InsertUsersTest {
                 user.setTags("[]");
                 user.setUserStatus(0);
                 user.setUserRole(0);
-                user.setPlanetCode("11111111");
                 userList.add(user);
                 if (j % batchSize == 0) {
                     break;

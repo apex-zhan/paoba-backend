@@ -11,7 +11,6 @@ import com.zxw.paoba.model.request.UserRegisterRequest;
 import com.zxw.paoba.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,15 +26,13 @@ import static com.zxw.paoba.constant.UserConstant.USER_LOGIN_STATE;
  */
 @RestController
 @RequestMapping("/user")
-@CrossOrigin(origins = {"http://localhost:3000"})
+@CrossOrigin()
 @Slf4j
 public class UserController {
 
     @Resource
     private UserService userService;
 
-    @Resource
-    private RedisTemplate<String, Object> redisTemplate;
 
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
@@ -49,7 +46,7 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
             return null;
         }
-        long result = userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        long result = userService.userRegister(userAccount, userPassword, checkPassword);
         return ResultUtils.success(result);
     }
 
@@ -91,13 +88,13 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUsers(String userName, HttpServletRequest request) {
         if (!userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        if (StringUtils.isNotBlank(username)) {
-            queryWrapper.like("username", username);
+        if (StringUtils.isNotBlank(userName)) {
+            queryWrapper.like("userName", userName);
         }
         List<User> userList = userService.list(queryWrapper);
         List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
@@ -115,13 +112,18 @@ public class UserController {
 
     @PostMapping("/update")
     public BaseResponse<Integer> updateUser(@RequestBody User user, HttpServletRequest request) {
-        // 校验参数是否为空
-        if (user == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        //1. 校验参数是否为空
+        if(user == null){
+            throw  new BusinessException(ErrorCode.NULL_ERROR);
         }
+        //2. 校验权限
         User loginUser = userService.getLoginUser(request);
-        int result = userService.updateUser(user, loginUser);
-        return ResultUtils.success(result);
+        if (loginUser == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        //3. 更新用户信息
+        int updatedUser = userService.updateUser(user,loginUser);
+        return ResultUtils.success(updatedUser);
     }
 
     @PostMapping("/delete")

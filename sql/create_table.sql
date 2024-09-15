@@ -2,11 +2,11 @@
 -- 用户表
 create table user
 (
-    username     varchar(256) null comment '用户昵称',
+    userName     varchar(256) null comment '用户昵称',
     id           bigint auto_increment comment 'id'
         primary key,
     userAccount  varchar(256) null comment '账号',
-    avatarUrl    varchar(1024) null comment '用户头像',
+    userAvatar    varchar(1024) null comment '用户头像',
     gender       tinyint null comment '性别',
     userPassword varchar(512)       not null comment '密码',
     phone        varchar(128) null comment '电话',
