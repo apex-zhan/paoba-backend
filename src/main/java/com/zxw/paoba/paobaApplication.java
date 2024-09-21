@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @MapperScan("com.zxw.paoba.mapper")
+//开启定时任务
 @EnableScheduling
 public class paobaApplication {
 

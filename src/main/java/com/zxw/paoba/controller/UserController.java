@@ -113,16 +113,16 @@ public class UserController {
     @PostMapping("/update")
     public BaseResponse<Integer> updateUser(@RequestBody User user, HttpServletRequest request) {
         //1. 校验参数是否为空
-        if(user == null){
-            throw  new BusinessException(ErrorCode.NULL_ERROR);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
         }
         //2. 校验权限
         User loginUser = userService.getLoginUser(request);
-        if (loginUser == null){
+        if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         //3. 更新用户信息
-        int updatedUser = userService.updateUser(user,loginUser);
+        int updatedUser = userService.updateUser(user, loginUser);
         return ResultUtils.success(updatedUser);
     }
 
@@ -136,5 +136,13 @@ public class UserController {
         }
         boolean b = userService.removeById(id);
         return ResultUtils.success(b);
+    }
+
+    @GetMapping("/recommend")
+    public BaseResponse<List<User>> recommendUsers( HttpServletRequest request) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        List<User> userList = userService.list(queryWrapper);
+        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(list);
     }
 }

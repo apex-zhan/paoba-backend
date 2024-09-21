@@ -1,6 +1,7 @@
 package com.zxw.paoba.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -208,6 +209,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userId <= 0) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
+        // todo 校验(如果用户没有传任何更新的值，直接报错,不执行更新语句，加注解校验最快)
+        if (StringUtils.isBlank(user.getUserAvatar())
+                && StringUtils.isBlank(user.getUserName())
+                && StringUtils.isBlank(user.getEmail())
+                && StringUtils.isBlank(user.getPhone())) {
+        }
+        if (user.getId() != loginUser.getId()) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
         // 仅管理员可修改
         if (!isAdmin(loginUser) && userId != loginUser.getId()) {
             throw new BusinessException(ErrorCode.NO_AUTH);
@@ -256,6 +266,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public boolean isAdmin(User loginUser) {
         return loginUser != null && loginUser.getUserRole() == UserConstant.ADMIN_ROLE;
     }
+
+//    @Override
+//    public List<User> Page(Page<Object> objectPage, QueryWrapper<User> queryWrapper) {
+//        return null;
+//    }
 
 
     /**
