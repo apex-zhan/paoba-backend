@@ -1,5 +1,6 @@
 package com.zxw.paoba.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zxw.paoba.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -85,4 +86,5 @@ public interface UserService extends IService<User> {
      * @return
      */
     boolean isAdmin(User loginUser);
+
 }
