@@ -1,6 +1,7 @@
 package com.zxw.paoba.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zxw.paoba.common.BaseResponse;
 import com.zxw.paoba.common.ErrorCode;
 import com.zxw.paoba.common.ResultUtils;
@@ -11,12 +12,16 @@ import com.zxw.paoba.model.request.UserRegisterRequest;
 import com.zxw.paoba.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.zxw.paoba.constant.UserConstant.USER_LOGIN_STATE;
@@ -30,8 +35,10 @@ import static com.zxw.paoba.constant.UserConstant.USER_LOGIN_STATE;
 @Slf4j
 public class UserController {
 
-    @Resource
+    @Autowired
     private UserService userService;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
 
     @PostMapping("/register")
@@ -138,11 +145,35 @@ public class UserController {
         return ResultUtils.success(b);
     }
 
+    /**
+     * 用户推荐
+     *
+     * @param pageSize
+     * @param pageNum
+     * @param request
+     * @return
+     */
     @GetMapping("/recommend")
-    public BaseResponse<List<User>> recommendUsers( HttpServletRequest request) {
+    public BaseResponse<Page<User>> recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
+        if (pageSize <= 0 || pageNum <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        String redisKey = String.format("paoba:user:recommend:%s", loginUser.getId());
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        //如果有缓存直接读
+        Page<User> userPage = (Page<User>) valueOperations.get(redisKey);
+        if (userPage != null) {
+            return ResultUtils.success(userPage);
+        }
+        //没有缓存就查询数据库
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        List<User> userList = userService.list(queryWrapper);
-        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
-        return ResultUtils.success(list);
+        userPage = userService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        try {
+            valueOperations.set(redisKey, userPage, 30000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.error("redis set key error", e);
+        }
+        return ResultUtils.success(userPage);
     }
 }
