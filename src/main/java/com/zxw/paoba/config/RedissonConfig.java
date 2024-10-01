@@ -16,9 +16,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "spring.redis")
 @Data
-public class RedissionConfig {
+public class RedissonConfig {
     private String host;
     private String port;
+
     @Bean
     public RedissonClient redissonClient() {
         // 1. Create config object
@@ -26,21 +27,9 @@ public class RedissionConfig {
         String redis = String.format("redis://%s:%s", host, port);
         // useClusterServers集群
         // useSingleServer单机
-        config.useSingleServer().setAddress(redis).setDatabase(2);
-        // use "redis://" for SSL connection
-
-        // or read config from file
-        // config = Config.fromYAML(new File("config-file.yaml"));
-        // 2. Create Redisson instance
-
+        config.useSingleServer().setAddress(redis).setDatabase(3);
         // Sync and Async API
         RedissonClient redisson = Redisson.create(config);
-
-        // Reactive API
-        // RedissonReactiveClient redissonReactive = redisson.reactive();
-
-        // RxJava3 API
-        // RedissonRxClient redissonRx = redisson.rxJava();
         return redisson;
     }
 }
