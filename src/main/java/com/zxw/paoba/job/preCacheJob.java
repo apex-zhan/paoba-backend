@@ -37,7 +37,7 @@ public class preCacheJob {
     private List<Long> mainUserList = Arrays.asList(1L);
     @Scheduled(cron = "0 0 1 * * ?")
     public void doCacheRecommendUser() {
-        RLock lock = redissonClient.getLock("paoba:job:cacheRecommendUser.lock");
+        RLock lock = redissonClient.getLock("paoba:job:cacheRecommendUser:lock");
         try {
             if (lock.tryLock(0, 30000L, TimeUnit.MILLISECONDS)) {
                 for (Long userId : mainUserList) {
