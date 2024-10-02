@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * 队伍查询封装类
- *
+ * @EqualsAndHashCode(callSuper = true)该注解用于简化生成 equals 和 hashCode 方法
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
