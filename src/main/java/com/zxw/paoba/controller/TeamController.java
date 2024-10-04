@@ -7,7 +7,9 @@ import com.zxw.paoba.common.ErrorCode;
 import com.zxw.paoba.common.ResultUtils;
 import com.zxw.paoba.exception.BusinessException;
 import com.zxw.paoba.model.domain.Team;
+import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.dto.TeamQuery;
+import com.zxw.paoba.model.request.TeamAddRequest;
 import com.zxw.paoba.service.TeamService;
 import com.zxw.paoba.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,16 +35,16 @@ public class TeamController {
      * 添加队伍
      */
     @PostMapping("/add")
-    public BaseResponse<Long> addTeam(@RequestBody Team team, HttpServletRequest request) {
-        if (team == null) {
+    public BaseResponse<Long> addTeam(@RequestBody TeamAddRequest teamAddRequest, HttpServletRequest request) {
+        if (teamAddRequest == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
         //插入
-        boolean save = teamService.save(team);
-        if (!save) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍创建失败");
-        }
-        return ResultUtils.success(team.getId());
+        User loginUser = userService.getLoginUser(request);
+        Team team = new Team();
+        BeanUtils.copyProperties(teamAddRequest, team);
+        long teamId = teamService.addTeam(team, loginUser);
+        return ResultUtils.success(teamId);
     }
 
     @PostMapping("/update")
@@ -84,7 +86,7 @@ public class TeamController {
 
     @GetMapping("/list/page")
     public BaseResponse<Page<Team>> listTeamsByPage(TeamQuery teamQuery, HttpServletRequest request) {
-        if (teamQuery == null){
+        if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         Team team = new Team();
