@@ -14,7 +14,11 @@ public enum TeamStatusEnum {
 
     private String text;
 
-
+    /**
+     * 根据值获取枚举
+     * @param value
+     * @return
+     */
     public static TeamStatusEnum getEnumByValue(Integer value) {
         if (value == null) {
             return null;

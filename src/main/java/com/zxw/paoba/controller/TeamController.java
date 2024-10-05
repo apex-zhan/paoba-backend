@@ -83,6 +83,14 @@ public class TeamController {
         }
         return ResultUtils.success(team);
     }
+    @GetMapping("/list")
+    public BaseResponse<List<Team>> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
+        if (teamQuery == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        List<Team> teamList = teamService.listTeams(teamQuery);
+        return ResultUtils.success(teamList);
+    }
 
     @GetMapping("/list/page")
     public BaseResponse<Page<Team>> listTeamsByPage(TeamQuery teamQuery, HttpServletRequest request) {

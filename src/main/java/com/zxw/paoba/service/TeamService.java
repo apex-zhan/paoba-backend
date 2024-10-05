@@ -4,6 +4,10 @@ package com.zxw.paoba.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
+import com.zxw.paoba.model.dto.TeamQuery;
+import com.zxw.paoba.model.vo.TeamUserVO;
+
+import java.util.List;
 
 /**
 * @author zxw
@@ -19,4 +23,11 @@ public interface TeamService extends IService<Team> {
      */
     Long addTeam(Team team, User loginUser);
 
+    /**
+     * 查询队伍列表
+     *
+     * @param teamQuery
+     * @return
+     */
+    List<TeamUserVO> listTeams(TeamQuery teamQuery);
 }
