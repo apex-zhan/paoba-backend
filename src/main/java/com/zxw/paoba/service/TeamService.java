@@ -10,14 +10,15 @@ import com.zxw.paoba.model.vo.TeamUserVO;
 import java.util.List;
 
 /**
-* @author zxw
-* @description 针对表【team(队伍)】的数据库操作Service
-* @createDate 2024-10-02 15:18:51
-*/
+ * @author zxw
+ * @description 针对表【team(队伍)】的数据库操作Service
+ * @createDate 2024-10-02 15:18:51
+ */
 public interface TeamService extends IService<Team> {
 
     /**
      * 创建队伍
+     *
      * @param team 队伍信息
      * @return 队伍id
      */
@@ -29,5 +30,6 @@ public interface TeamService extends IService<Team> {
      * @param teamQuery
      * @return
      */
-    List<TeamUserVO> listTeams(TeamQuery teamQuery);
+
+    List<TeamUserVO> listTeams(TeamQuery teamQuery, boolean isAdmin);
 }

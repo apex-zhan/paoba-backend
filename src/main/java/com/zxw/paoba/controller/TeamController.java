@@ -10,6 +10,7 @@ import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.dto.TeamQuery;
 import com.zxw.paoba.model.request.TeamAddRequest;
+import com.zxw.paoba.model.vo.TeamUserVO;
 import com.zxw.paoba.service.TeamService;
 import com.zxw.paoba.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -84,11 +85,12 @@ public class TeamController {
         return ResultUtils.success(team);
     }
     @GetMapping("/list")
-    public BaseResponse<List<Team>> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
+    public BaseResponse<List<TeamUserVO>> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
         if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        List<Team> teamList = teamService.listTeams(teamQuery);
+        boolean admin = userService.isAdmin(request);
+        List<TeamUserVO> teamList = teamService.listTeams(teamQuery, admin);
         return ResultUtils.success(teamList);
     }
 

@@ -28,8 +28,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import static net.sf.jsqlparser.util.validation.metadata.NamedObject.user;
-
 /**
  * @author zxw
  * @description 针对表【team(队伍)】的数据库操作Service实现,使用@Transactional来确保线程安全和sql的原子性
@@ -116,6 +114,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return teamId;
     }
 
+
     /**
      * 查询队伍列表
      *
@@ -123,7 +122,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
      * @return
      */
     @Override
-    public List<TeamUserVO> listTeams(TeamQuery teamQuery) {
+    public List<TeamUserVO> listTeams(TeamQuery teamQuery, boolean isAdmin) {
         QueryWrapper<Team> queryWrapper = new QueryWrapper<>();
         if (teamQuery != null) {
             queryWrapper.lambda().eq(Team::getId, teamQuery.getId());
@@ -134,54 +133,62 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             queryWrapper.lambda().eq(Team::getMaxNum, teamQuery.getMaxNum());
             Integer status = teamQuery.getStatus();
             TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByValue(status);
-            if (statusEnum == null) {
-                //不传默认公开
-                statusEnum = TeamStatusEnum.PUBLIC;
+            String searchText = teamQuery.getSearchText();
+            if (StringUtils.isNotBlank(searchText)) {
+                queryWrapper.lambda().like(Team::getName, searchText).or().like(Team::getDescription, searchText);
             }
-            queryWrapper.lambda().eq(Team::getStatus, statusEnum.getValue());
-        }
-        //不展示已过期的队伍
-        //expireTime is  null or expireTime > now()
-        queryWrapper.lambda().gt(Team::getExpireTime, new Date()).or().isNull(Team::getExpireTime);
-        //查询队伍列表
-        List<Team> teamList = this.list();
-        if (CollectionUtils.isEmpty(teamList)) {
-            return new ArrayList<>();
-        }
-        /**
-         * 关联查询创建人的用户信息
-         */
-        //一. 自己写sql
-        //1. 查询队伍和创建人的信息
-        // select * from team t left join user u on t.userId = u.id
-        //2. 查询队伍和已加入队伍成员的信息
-        //select * from team t
-        // left join user_team ut on t.id = ut.teamId
-        // left join user u on u.id = ut.userId
+                if (statusEnum == null) {
+                    //不传默认公开
+                    statusEnum = TeamStatusEnum.PUBLIC;
+                }
+                if (!isAdmin && statusEnum == TeamStatusEnum.PRIVATE) {
+                    //非管理员查询私有队伍，则不展示
+                    throw new BusinessException(ErrorCode.NO_AUTH, "无权限");
+                }
+                queryWrapper.lambda().eq(Team::getStatus, statusEnum.getValue());
+            }
+            //不展示已过期的队伍
+            //expireTime is  null or expireTime > now()
+            queryWrapper.lambda().gt(Team::getExpireTime, new Date()).or().isNull(Team::getExpireTime);
+            //查询队伍列表
+            List<Team> teamList = this.list();
+            if (CollectionUtils.isEmpty(teamList)) {
+                return new ArrayList<>();
+            }
+            /**
+             * 关联查询创建人的用户信息
+             */
+            //一. 自己写sql
+            //1. 查询队伍和创建人的信息
+            // select * from team t left join user u on t.userId = u.id
+            //2. 查询队伍和已加入队伍成员的信息
+            //select * from team t
+            // left join user_team ut on t.id = ut.teamId
+            // left join user u on u.id = ut.userId
 
-        //二. 使用mybatis-plus提供的关联查询
-        ArrayList<TeamUserVO> teamUserVOList = new ArrayList<>();
-        //遍历拿到队伍列表中的创建人用户id,通过他去查询他的用户信息
-        for (Team team : teamList) {
-            Long UserId = team.getUserId();
-            if (UserId == null) {
-                continue;
+            //二. 使用mybatis-plus提供的关联查询
+            ArrayList<TeamUserVO> teamUserVOList = new ArrayList<>();
+            //遍历拿到队伍列表中的创建人用户id,通过他去查询他的用户信息
+            for (Team team : teamList) {
+                Long UserId = team.getUserId();
+                if (UserId == null) {
+                    continue;
+                }
+                //查询用户信息
+                User user = userService.getById(UserId);
+                TeamUserVO teamUserVO = new TeamUserVO();
+                BeanUtils.copyProperties(team, teamUserVO);
+                //脱敏用户人信息
+                if (user != null) {
+                    UserVO userVO = new UserVO();
+                    BeanUtils.copyProperties(user, userVO);
+                    teamUserVO.setCreateUser(userVO);
+                }
+                teamUserVOList.add(teamUserVO);
             }
-            //查询用户信息
-            User user = userService.getById(UserId);
-            TeamUserVO teamUserVO = new TeamUserVO();
-            BeanUtils.copyProperties(team, teamUserVO);
-            //脱敏用户人信息
-            if (user != null) {
-                UserVO userVO = new UserVO();
-                BeanUtils.copyProperties(user, userVO);
-                teamUserVO.setCreateUser(userVO);
-            }
-            teamUserVOList.add(teamUserVO);
+            return teamUserVOList;
         }
-        return teamUserVOList;
     }
-}
 
 
 
