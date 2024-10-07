@@ -11,6 +11,7 @@ import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.domain.UserTeam;
 import com.zxw.paoba.model.dto.TeamQuery;
 import com.zxw.paoba.model.enums.TeamStatusEnum;
+import com.zxw.paoba.model.request.TeamUpdateRequest;
 import com.zxw.paoba.model.vo.TeamUserVO;
 import com.zxw.paoba.model.vo.UserVO;
 import com.zxw.paoba.service.TeamService;
@@ -40,10 +41,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     private UserTeamService userTeamService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private TeamService teamService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public  Long addTeam(Team team, User loginUser) {
+    public Long addTeam(Team team, User loginUser) {
 //        请求参数允许为空？
         if (team == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
@@ -208,8 +211,46 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
         return teamUserVOList;
     }
-}
 
+
+    @Override
+    public boolean updateTeams(TeamUpdateRequest teamUpdateRequest, User loginUser) {
+        if (teamUpdateRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Long teamId = teamUpdateRequest.getId();
+        if (teamId == null || teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Team oldTeam = this.getById(teamId);
+        if (oldTeam == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "队伍不存在");
+        }
+        // 只有管理员和创建者才能修改
+        boolean isAdmin = userService.isAdmin(loginUser);
+        if (!isAdmin && !oldTeam.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        //队伍状态只能修改为加密或公开或者私有
+        Integer status = teamUpdateRequest.getStatus();
+        TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByValue(status);
+        if (statusEnum.equals(TeamStatusEnum.SECRET)) {
+            if (StringUtils.isBlank(teamUpdateRequest.getPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "加密房间必须设置密码");
+            }
+        }
+        //如果用户更新的数据新老值一样，就不更新
+        if (teamUpdateRequest.equals(oldTeam)) {
+            return true;
+        }
+        //更新队伍信息
+        Team team = new Team();
+        BeanUtils.copyProperties(teamUpdateRequest, team);
+        team.setUpdateTime(new Date());
+        boolean updatedById = this.updateById(team);
+        return updatedById;
+    }
+}
 
 
 

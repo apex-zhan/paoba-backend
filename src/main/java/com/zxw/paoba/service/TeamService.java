@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.dto.TeamQuery;
+import com.zxw.paoba.model.request.TeamUpdateRequest;
 import com.zxw.paoba.model.vo.TeamUserVO;
 
 import java.util.List;
@@ -32,4 +33,13 @@ public interface TeamService extends IService<Team> {
      */
 
     List<TeamUserVO> listTeams(TeamQuery teamQuery, boolean isAdmin);
+
+    /**
+     * 更新队伍信息
+     *
+     * @param teamUpdateRequest
+     * @param loginUser
+     * @return
+     **/
+    boolean updateTeams(TeamUpdateRequest teamUpdateRequest, User loginUser);
 }

@@ -15,7 +15,7 @@ public class TeamUpdateRequest implements Serializable {
     private static final long serialVersionUID = 3191241716373120793L;
 
     /**
-     * id
+     * 数据库的id
      */
     private Long id;
 
