@@ -385,6 +385,13 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
         boolean remove = userTeamService.remove(userTeamQueryWrapper);
         return remove;
     }
+
+    /**
+     * 解散队伍
+     * @param id
+     * @param loginUser
+     * @return
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean dissolveTeam(Long id, User loginUser) {
