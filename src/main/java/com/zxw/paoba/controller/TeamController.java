@@ -16,6 +16,7 @@ import com.zxw.paoba.model.request.TeamUpdateRequest;
 import com.zxw.paoba.model.vo.TeamUserVO;
 import com.zxw.paoba.service.TeamService;
 import com.zxw.paoba.service.UserService;
+import com.zxw.paoba.service.UserTeamService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -71,7 +72,8 @@ public class TeamController {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
-        boolean removeById = teamService.removeById(id);
+        User loginUser = userService.getLoginUser(request);
+        boolean removeById = teamService.dissolveTeam(id, loginUser);
         if (!removeById) {
             throw new BusinessException(ErrorCode.NULL_ERROR, "队伍删除失败");
         }
