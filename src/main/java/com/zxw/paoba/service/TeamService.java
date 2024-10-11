@@ -2,12 +2,18 @@ package com.zxw.paoba.service;
 
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.zxw.paoba.common.BaseResponse;
 import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.dto.TeamQuery;
+import com.zxw.paoba.model.request.TeamJoinRequest;
+import com.zxw.paoba.model.request.TeamQuitRequest;
 import com.zxw.paoba.model.request.TeamUpdateRequest;
 import com.zxw.paoba.model.vo.TeamUserVO;
+import lombok.extern.java.Log;
+import org.springframework.web.bind.annotation.RequestBody;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
@@ -42,4 +48,10 @@ public interface TeamService extends IService<Team> {
      * @return
      **/
     boolean updateTeams(TeamUpdateRequest teamUpdateRequest, User loginUser);
+
+    boolean joinTeam(TeamJoinRequest teamJoinRequest, User loginUser);
+
+    boolean quitTeam(TeamQuitRequest teamQuitRequest, User loginUser);
+
+    boolean dissolveTeam(Long id, User loginUser);
 }

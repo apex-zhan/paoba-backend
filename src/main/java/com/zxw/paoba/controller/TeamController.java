@@ -10,6 +10,9 @@ import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.model.dto.TeamQuery;
 import com.zxw.paoba.model.request.TeamAddRequest;
+import com.zxw.paoba.model.request.TeamJoinRequest;
+import com.zxw.paoba.model.request.TeamQuitRequest;
+import com.zxw.paoba.model.request.TeamUpdateRequest;
 import com.zxw.paoba.model.vo.TeamUserVO;
 import com.zxw.paoba.service.TeamService;
 import com.zxw.paoba.service.UserService;
@@ -49,12 +52,14 @@ public class TeamController {
     }
 
     @PostMapping("/update")
-    public BaseResponse<Boolean> updateTeam(@RequestBody Team team, HttpServletRequest request) {
+    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateRequest TeamUpdateRequest, HttpServletRequest request) {
         //校验
-        if (team == null) {
+        if (TeamUpdateRequest == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
-        boolean updateById = teamService.updateById(team);
+        User loginUser = userService.getLoginUser(request);
+        boolean updateById = teamService.updateTeams(TeamUpdateRequest, loginUser);
+
         if (!updateById) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍更新失败");
         }
@@ -84,6 +89,7 @@ public class TeamController {
         }
         return ResultUtils.success(team);
     }
+
     @GetMapping("/list")
     public BaseResponse<List<TeamUserVO>> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
         if (teamQuery == null) {
@@ -107,6 +113,26 @@ public class TeamController {
         QueryWrapper<Team> queryWrapper = new QueryWrapper<>();
         Page<Team> teamPage = teamService.page(page, queryWrapper);
         return ResultUtils.success(teamPage);
+    }
+
+    @PostMapping("/join")
+    public BaseResponse<Boolean> joinTeam(@RequestBody TeamJoinRequest teamJoinRequest, HttpServletRequest request) {
+        if (teamJoinRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        boolean joinTeam = teamService.joinTeam(teamJoinRequest, loginUser);
+        return ResultUtils.success(joinTeam);
+    }
+
+    @PostMapping("/quit")
+    public BaseResponse<Boolean> quitTeam(@RequestBody TeamQuitRequest teamQuitRequest, HttpServletRequest request) {
+        if (teamQuitRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        boolean quitTeam = teamService.quitTeam(teamQuitRequest, loginUser);
+        return ResultUtils.success(quitTeam);
     }
 
 }

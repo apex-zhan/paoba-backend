@@ -240,7 +240,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userObj == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
+            throw new BusinessException(ErrorCode.NO_AUTH,"未登录或者账号密码错误");
         }
         return (User) userObj;
     }
