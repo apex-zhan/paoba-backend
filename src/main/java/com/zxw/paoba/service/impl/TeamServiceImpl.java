@@ -394,7 +394,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean dissolveTeam(Long id, User loginUser) {
+    public boolean dissolveTeam(@RequestBody Long id, User loginUser) {
         Team team = getTeamById(id);
         Long teamId = team.getId();
         if (teamId == null || teamId <= 0) {
