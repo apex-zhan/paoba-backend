@@ -44,6 +44,11 @@ public class User implements Serializable {
     private String userPassword;
 
     /**
+     * 用户简介
+     */
+    private String userProfile;
+
+    /**
      * 电话
      */
     private String phone;
@@ -73,11 +78,13 @@ public class User implements Serializable {
      */
     private Date updateTime;
 
+
     /**
      * 是否删除
      */
     @TableLogic
     private Integer isDelete;
+
 
     /**
      * 用户角色 0 - 普通用户 ; 1 - 管理员

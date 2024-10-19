@@ -7,7 +7,6 @@ import java.util.Date;
 
 /**
  * 用户包装类（脱敏）
- *
  */
 @Data
 public class UserVO implements Serializable {
@@ -45,6 +44,11 @@ public class UserVO implements Serializable {
      * 邮箱
      */
     private String email;
+
+    /**
+     * 用户简介
+     */
+    private String userProfile;
 
     /**
      * 标签列表 json

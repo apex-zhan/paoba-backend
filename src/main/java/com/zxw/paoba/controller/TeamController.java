@@ -8,6 +8,7 @@ import com.zxw.paoba.common.ResultUtils;
 import com.zxw.paoba.exception.BusinessException;
 import com.zxw.paoba.model.domain.Team;
 import com.zxw.paoba.model.domain.User;
+import com.zxw.paoba.model.domain.UserTeam;
 import com.zxw.paoba.model.dto.TeamQuery;
 import com.zxw.paoba.model.request.TeamAddRequest;
 import com.zxw.paoba.model.request.TeamJoinRequest;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/team")
@@ -35,6 +37,8 @@ public class TeamController {
     private UserService userService;
     @Autowired
     private TeamService teamService;
+    @Autowired
+    private UserTeamService userTeamService;
 
     /**
      * 添加队伍
@@ -137,4 +141,60 @@ public class TeamController {
         return ResultUtils.success(quitTeam);
     }
 
+    /**
+     * 获取我创建的队伍
+     *
+     * @param teamQuery
+     * @param request
+     * @return
+     */
+    @GetMapping("/list/my/create")
+    public BaseResponse<List<TeamUserVO>> listMyTeams(TeamQuery teamQuery, HttpServletRequest request) {
+        if (teamQuery == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        // 只查询登录用户id创建队伍
+        teamQuery.setUserId(loginUser.getId());
+        //直接把管理员参数改成true，自己也能看见自己创建的队伍了
+        List<TeamUserVO> teamList = teamService.listTeams(teamQuery, true);
+        return ResultUtils.success(teamList);
+    }
+
+    /**
+     * 获取我加入的队伍
+     *
+     * @param teamQuery
+     * @param request
+     * @return
+     */
+    @GetMapping("/list/my/join")
+    public BaseResponse<List<TeamUserVO>> listMyJoinTeams(TeamQuery teamQuery, HttpServletRequest request) {
+        if (teamQuery == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        QueryWrapper<UserTeam> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userId", loginUser.getId());
+        List<UserTeam> userTeamList = userTeamService.list(queryWrapper);
+        //取出不重复的队伍id
+        //teamId userId
+        //1,2
+        //1,3
+        //2,3
+        //result
+        //1 => 2,3
+        //2 => 3
+        //从userTeamList中提取了所有唯一的团队ID
+        List<Long> list = userTeamList.stream().map(UserTeam::getTeamId).distinct().collect(Collectors.toList());
+        teamQuery.setIdList(list);
+        List<TeamUserVO> teamList = teamService.listTeams(teamQuery, true);
+        return ResultUtils.success(teamList);
+    }
 }

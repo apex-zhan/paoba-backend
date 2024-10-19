@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.RequestParam;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -141,6 +142,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         safetyUser.setUserName(originUser.getUserName());
         safetyUser.setUserAccount(originUser.getUserAccount());
         safetyUser.setUserAvatar(originUser.getUserAvatar());
+        safetyUser.setUserProfile(originUser.getUserProfile());
         safetyUser.setGender(originUser.getGender());
         safetyUser.setPhone(originUser.getPhone());
         safetyUser.setEmail(originUser.getEmail());
@@ -240,7 +242,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userObj == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH,"未登录或者账号密码错误");
+            throw new BusinessException(ErrorCode.NO_AUTH, "未登录或者账号密码错误");
         }
         return (User) userObj;
     }

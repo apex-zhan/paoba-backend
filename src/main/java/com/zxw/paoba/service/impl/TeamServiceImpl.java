@@ -28,10 +28,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author zxw
@@ -52,6 +54,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
      * @param loginUser
      * @return
      */
+    ConcurrentHashMap<String, Object> lock = new ConcurrentHashMap<>();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -93,16 +96,23 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
         }
 //          ● 超时时间>当前时间
         Date expireTime = team.getExpireTime();
+        if (expireTime == null) {
+            // 默认设置到2050年
+            expireTime = new Date(2050 - 1900, 1 - 1, 1);
+        }
+
 //        判断当前时间是否已超过给定的expireTime
         if (new Date().after(expireTime)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍过期时间不合法");
         }
-        synchronized (userId.toString().intern()) {
+        //存在直接返回，否则执行自定义逻辑
+        Object computeIfAbsent = lock.computeIfAbsent(userId.toString(), key -> new User());
+        synchronized (computeIfAbsent) {
 //            1. 校验信息
 //          ● 校验用户最多创建队伍 5 个
 //            用户如果点击100次就创了100个,解决方法就是加锁
             QueryWrapper<Team> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("user_id", userId);
+            queryWrapper.eq("userId", userId);
             long count = this.count(queryWrapper);
             if (count >= 5) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户最多创建队伍 5 个");
@@ -110,6 +120,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
             //2. 插入队伍信息到队伍表
             team.setId(null);
             team.setUserId(userId);
+            team.setExpireTime(expireTime);
             boolean res = this.save(team);
             Long teamId = team.getId();
             if (!res || teamId == null) {
@@ -146,6 +157,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
             }
             List<Long> idList = teamQuery.getIdList();
             if (CollectionUtils.isNotEmpty(idList)) {
+                //即队伍ID必须在 idList 列表中
                 queryWrapper.in("id", idList);
             }
             String searchText = teamQuery.getSearchText();
@@ -252,7 +264,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
         //队伍状态只能修改为加密或公开或者私有
         Integer status = teamUpdateRequest.getStatus();
         TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByValue(status);
-        if (statusEnum.equals(TeamStatusEnum.SECRET) || StringUtils.isBlank(teamUpdateRequest.getPassword())) {
+        if (statusEnum.equals(TeamStatusEnum.SECRET) && StringUtils.isBlank(teamUpdateRequest.getPassword())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "加密房间必须设置密码");
         }
         // todo 如果用户更新的数据新老值一样，就不更新
@@ -339,7 +351,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
         Long teamId = teamQuitRequest.getTeamId();
         Team team = getTeamById(teamId);
         long loginUserId = loginUser.getId();
-        // 校验是否已加入队伍
+        // 校验是否已加入队伍F
         UserTeam userTeam = new UserTeam();
         userTeam.setTeamId(teamId);
         userTeam.setUserId(loginUserId);
@@ -388,6 +400,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
 
     /**
      * 解散队伍
+     *
      * @param id
      * @param loginUser
      * @return
@@ -401,7 +414,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍不存在");
         }
         // 校验是否为队伍创建人
-        if(team.getUserId() != loginUser.getId()){
+        if (team.getUserId() != loginUser.getId()) {
             throw new BusinessException(ErrorCode.NO_AUTH, "无操作权限");
         }
         // 移除所有加入队伍的关联信息
@@ -410,7 +423,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除队伍失败");
         }
         return this.removeById(teamId);
-    };
+    }
+
+    ;
 
     /**
      * 根据 id 获取队伍信息
