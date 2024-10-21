@@ -3,6 +3,7 @@ package com.zxw.paoba.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zxw.paoba.common.BaseResponse;
+import com.zxw.paoba.common.DeleteRequest;
 import com.zxw.paoba.common.ErrorCode;
 import com.zxw.paoba.common.ResultUtils;
 import com.zxw.paoba.exception.BusinessException;
@@ -72,10 +73,11 @@ public class TeamController {
     }
 
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteTeam(@RequestBody long id, HttpServletRequest request) {
-        if (id <= 0) {
+    public BaseResponse<Boolean> deleteTeam(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
+        if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
+        long id = deleteRequest.getId();
         User loginUser = userService.getLoginUser(request);
         boolean removeById = teamService.dissolveTeam(id, loginUser);
         if (!removeById) {
