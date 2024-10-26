@@ -10,10 +10,12 @@ import com.zxw.paoba.exception.BusinessException;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.service.UserService;
 import com.zxw.paoba.mapper.UserMapper;
+import com.zxw.paoba.utils.AlgorithmUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.apache.commons.math3.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
@@ -287,12 +289,69 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         // 拼接 and 查询
         // like '%Java%' and like '%Python%'
-        //在循环体内部，可以使用变量tarName访问当前遍历到的元素
-        for (String tarName : tagNameList) {
-            queryWrapper = queryWrapper.like("tags", tarName);
+        //在循环体内部，可以使用变量tagName访问当前遍历到的元素
+        for (String tagName : tagNameList) {
+            queryWrapper = queryWrapper.like("tags", tagName);
         }
         List<User> userList = userMapper.selectList(queryWrapper);
         //userList.forEach(user -> { getSafetyUser(user); });
         return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> matchUsers(long num, User loginUser) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id", "tags");
+        queryWrapper.isNotNull("tags");
+        List<User> userList = this.list(queryWrapper);
+        String tags = loginUser.getTags();
+        if (StringUtils.isBlank(tags)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Gson gson = new Gson();
+        // 将json字符串反序列化成对象
+        List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
+        }.getType());
+        //用户列表的下标 => 相似度
+        List<Pair<User, Long>> list = new ArrayList<>();
+        // 遍历用户列表和当前登录用户的相似度
+        for (int i = 0; i < userList.size(); i++) {
+            User user = userList.get(i);
+            String userTags = user.getTags();
+            // 用户没有标签或者用户是登录用户自己，跳过
+            if (StringUtils.isEmpty(userTags) || user.getId() == loginUser.getId()) {
+                continue;
+            }
+            List<String> userTagList = gson.fromJson(userTags, new TypeToken<List<String>>() {
+            }.getType());
+            // 按编辑距离计算相似度（编辑距离越大，相似度越小）
+            long distance = AlgorithmUtils.minDistance(tagList, userTagList);
+            list.add(new Pair<>(user, distance));
+        }
+        // 根据相似度分数升序排序
+        List<Pair<User, Long>> topUserpairList = list.stream().sorted((a, b) -> (int) (a.getValue() - b.getValue())).limit(num).collect(Collectors.toList());
+        //原本顺序的userId列表
+        List<User> userVOList = topUserpairList.stream().map(Pair::getKey).collect(Collectors.toList());
+        // 除了返回id和tags信息,还要获取其他用户信息返回
+        QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+        // 已经知道了最匹配用户的id，所以直接用in查询用户id即可（注意in查询没有顺序）
+        List<Long> userIdList = userVOList.stream().map(Pair -> Pair.getId()).collect(Collectors.toList());
+        userQueryWrapper.in("id", userIdList);
+        // 查询所有的用户信息，返回这个最后的脱敏结果
+        List<User> users = this.list(userQueryWrapper).stream().map(user ->
+                getSafetyUser(user)
+        ).collect(Collectors.toList());
+        // 1, 3, 2
+        // User1、User2、User3
+        // 1 => User1, 2 => User2, 3 => User3
+        Map<Long, List<User>> userIdUserListMap = this.list(userQueryWrapper)
+                .stream()
+                .map(user -> getSafetyUser(user))
+                .collect(Collectors.groupingBy(User::getId));
+        List<User> finalUserList = new ArrayList<>();
+        for (Long userId : userIdList) {
+            finalUserList.add(userIdUserListMap.get(userId).get(0));
+        }
+        return finalUserList;
     }
 }

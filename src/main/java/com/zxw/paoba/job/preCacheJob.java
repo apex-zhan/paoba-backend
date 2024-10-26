@@ -5,9 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.log4j.Logger;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 @Slf4j
 public class preCacheJob {
-
+    // 获取日志记录器实例
+    private static final Logger logger = Logger.getLogger(preCacheJob.class);
     @Resource
     private UserService userService;
     @Resource
@@ -35,6 +36,7 @@ public class preCacheJob {
 
     //重点用户
     private List<Long> mainUserList = Arrays.asList(1L);
+
     @Scheduled(cron = "0 0 1 * * ?")
     public void doCacheRecommendUser() {
         RLock lock = redissonClient.getLock("paoba:job:cacheRecommendUser:lock");
@@ -49,12 +51,12 @@ public class preCacheJob {
                     try {
                         valueOperations.set(redisKey, userPage, 30000, TimeUnit.MILLISECONDS);
                     } catch (Exception e) {
-                        log.error("redis set key error", e);
+                        logger.error("redis set key error", e);
                     }
                 }
             }
         } catch (InterruptedException e) {
-            log.error("redis lock error", e);
+            logger.error("redis lock error", e);
         } finally {
             //只有自己能释放自己的锁
             if (lock.isHeldByCurrentThread()) {
