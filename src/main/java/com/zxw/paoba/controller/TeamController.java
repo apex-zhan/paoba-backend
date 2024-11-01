@@ -107,23 +107,21 @@ public class TeamController {
         List<TeamUserVO> teamList = teamService.listTeams(teamQuery, admin);
         //判断当前用户是否已加入队伍
         //获取当前用户加入队伍的id列表
-        List<Long> list = teamList.stream().map(teamUserVO -> {
-            return teamUserVO.getId();
-        }).collect(Collectors.toList());
+        List<Long> TeamIdList = teamList.stream().map(TeamUserVO::getId).collect(Collectors.toList());
         QueryWrapper<UserTeam> userQueryWrapper = new QueryWrapper<>();
         try {
             //获取当前用户
             User loginUser = userService.getLoginUser(request);
             userQueryWrapper.eq("userId", loginUser.getId());
             //筛选出当前用户加入的队伍
-            userQueryWrapper.in("teamId", list);
+            userQueryWrapper.in("teamId", TeamIdList);
             List<UserTeam> userTeamList = userTeamService.list(userQueryWrapper);
             teamList.forEach(teamUserVO -> {
                 //判断当前用户是否已加入队伍
                 teamUserVO.setHasJoin(userTeamList.stream().anyMatch(userTeam -> userTeam.getTeamId().equals(teamUserVO.getId())));
             });
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("获取当前用户加入的队伍失败", e);
         }
         return ResultUtils.success(teamList);
     }
