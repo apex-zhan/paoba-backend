@@ -1,7 +1,8 @@
 package com.zxw.paoba.service;
 
-import com.zxw.paoba.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.zxw.paoba.model.domain.User;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -86,8 +87,9 @@ public interface UserService extends IService<User> {
      */
     boolean isAdmin(User loginUser);
 
+    List<User> searchUsersByTagsBySQL(@RequestParam(required = false) List<String> tagNameList);
+
     /**
-     *
      * @param num
      * @param loginUser
      * @return

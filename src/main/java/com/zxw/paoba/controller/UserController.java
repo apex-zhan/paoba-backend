@@ -111,7 +111,7 @@ public class UserController {
         if (CollectionUtils.isEmpty(tagNameList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        List<User> userList = userService.searchUsersByTags(tagNameList);
+        List<User> userList = userService.searchUsersByTagsBySQL(tagNameList);
         return ResultUtils.success(userList);
     }
 

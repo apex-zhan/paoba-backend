@@ -20,13 +20,15 @@ import com.zxw.paoba.service.TeamService;
 import com.zxw.paoba.service.UserService;
 import com.zxw.paoba.service.UserTeamService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -104,10 +106,16 @@ public class TeamController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         boolean admin = userService.isAdmin(request);
+        //1. 查询队伍列表
         List<TeamUserVO> teamList = teamService.listTeams(teamQuery, admin);
-        //判断当前用户是否已加入队伍
-        //获取当前用户加入队伍的id列表
-        List<Long> TeamIdList = teamList.stream().map(TeamUserVO::getId).collect(Collectors.toList());
+
+
+        /**
+         * 这段代码的目的是获取团队列表，并为每个团队设置一个标志，表示当前用户是否已加入该团队
+         */
+        //2. 获取当前用户加入队伍的id列表
+        final List<Long> TeamIdList = teamList.stream().map(TeamUserVO::getId).collect(Collectors.toList());
+        //3. 判断当前用户是否已加入队伍
         QueryWrapper<UserTeam> userQueryWrapper = new QueryWrapper<>();
         try {
             //获取当前用户
@@ -116,13 +124,28 @@ public class TeamController {
             //筛选出当前用户加入的队伍
             userQueryWrapper.in("teamId", TeamIdList);
             List<UserTeam> userTeamList = userTeamService.list(userQueryWrapper);
-            teamList.forEach(teamUserVO -> {
-                //判断当前用户是否已加入队伍
-                teamUserVO.setHasJoin(userTeamList.stream().anyMatch(userTeam -> userTeam.getTeamId().equals(teamUserVO.getId())));
+            //已加入队伍id的用户信息唯一集合
+            Set<Long> hasJoinTeamIdSet = userTeamList.stream().map(userTeam -> userTeam.getTeamId()).collect(Collectors.toSet());
+            teamList.forEach(team -> {
+                //用于获取当前团队的 ID，这个 ID 用于在 hasJoinTeamIdSet 中进行查找，并赋值给HasJoin字段
+                team.setHasJoin(hasJoinTeamIdSet.contains(team.getId()));
             });
         } catch (Exception e) {
-            log.error("获取当前用户加入的队伍失败", e);
+            log.error("查询加入队伍id失败", e);
         }
+
+        /**
+         * 查询加入队伍的用户信息（人数）
+         */
+        QueryWrapper<UserTeam> UserTeamJoinQueryWrapper = new QueryWrapper<>();
+        UserTeamJoinQueryWrapper.in("teamId", TeamIdList);
+        //查询到了所有加入了所有队伍列表中的任何一个队伍的用户
+        List<UserTeam> userTeamJoinList = userTeamService.list(UserTeamJoinQueryWrapper);
+        //分组按队伍id分组; 队伍id => 加入队伍id的用户列表
+        Map<Long, List<UserTeam>> teamIdUserCount = userTeamJoinList.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
+        teamList.forEach(teamUserVO -> {
+            teamUserVO.setHasJoinNum(teamIdUserCount.getOrDefault(teamUserVO.getId(), new ArrayList<>()).size());
+        });
         return ResultUtils.success(teamList);
     }
 

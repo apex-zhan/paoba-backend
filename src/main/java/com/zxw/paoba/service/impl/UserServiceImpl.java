@@ -7,15 +7,15 @@ import com.google.gson.reflect.TypeToken;
 import com.zxw.paoba.common.ErrorCode;
 import com.zxw.paoba.constant.UserConstant;
 import com.zxw.paoba.exception.BusinessException;
+import com.zxw.paoba.mapper.UserMapper;
 import com.zxw.paoba.model.domain.User;
 import com.zxw.paoba.service.UserService;
-import com.zxw.paoba.mapper.UserMapper;
 import com.zxw.paoba.utils.AlgorithmUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.apache.commons.math3.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
@@ -164,6 +164,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public int userLogout(HttpServletRequest request) {
         // 移除登录态
         request.getSession().removeAttribute(USER_LOGIN_STATE);
+        // 移除redis中的登录态 todo
         return 1;
     }
 
@@ -217,10 +218,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         // todo 校验(如果用户没有传任何更新的值，直接报错,不执行更新语句，加注解校验最快)
-        if (StringUtils.isBlank(user.getUserAvatar())
-                && StringUtils.isBlank(user.getUserName())
-                && StringUtils.isBlank(user.getEmail())
-                && StringUtils.isBlank(user.getPhone())) {
+        if (StringUtils.isBlank(user.getUserAvatar()) && StringUtils.isBlank(user.getUserName()) && StringUtils.isBlank(user.getEmail()) && StringUtils.isBlank(user.getPhone())) {
         }
         if (user.getId() != loginUser.getId()) {
             throw new BusinessException(ErrorCode.NO_AUTH);
@@ -281,8 +279,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @param tagNameList 用户要拥有的标签
      * @return
      */
-    @Deprecated
-    private List<User> searchUsersByTagsBySQL(@RequestParam(required = false) List<String> tagNameList) {
+    @Override
+    public List<User> searchUsersByTagsBySQL(@RequestParam(required = false) List<String> tagNameList) {
         if (CollectionUtils.isEmpty(tagNameList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -330,7 +328,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 根据相似度分数升序排序
         List<Pair<User, Long>> topUserpairList = list.stream().sorted((a, b) -> (int) (a.getValue() - b.getValue())).limit(num).collect(Collectors.toList());
-        //原本顺序的userId列表
+        // 原本顺序的userId列表
         List<User> userVOList = topUserpairList.stream().map(Pair::getKey).collect(Collectors.toList());
         // 除了返回id和tags信息,还要获取其他用户信息返回
         QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
@@ -338,16 +336,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         List<Long> userIdList = userVOList.stream().map(Pair -> Pair.getId()).collect(Collectors.toList());
         userQueryWrapper.in("id", userIdList);
         // 查询所有的用户信息，返回这个最后的脱敏结果
-        List<User> users = this.list(userQueryWrapper).stream().map(user ->
-                getSafetyUser(user)
-        ).collect(Collectors.toList());
+        List<User> users = this.list(userQueryWrapper).stream().map(user -> getSafetyUser(user)).collect(Collectors.toList());
         // 1, 3, 2
         // User1、User2、User3
         // 1 => User1, 2 => User2, 3 => User3
-        Map<Long, List<User>> userIdUserListMap = this.list(userQueryWrapper)
-                .stream()
-                .map(user -> getSafetyUser(user))
-                .collect(Collectors.groupingBy(User::getId));
+        Map<Long, List<User>> userIdUserListMap = this.list(userQueryWrapper).stream().map(user -> getSafetyUser(user)).collect(Collectors.groupingBy(User::getId));
         List<User> finalUserList = new ArrayList<>();
         for (Long userId : userIdList) {
             finalUserList.add(userIdUserListMap.get(userId).get(0));
