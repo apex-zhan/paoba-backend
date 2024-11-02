@@ -316,10 +316,17 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
         // 该用户已加入的队伍数量
         long userId = loginUser.getId();
         // 只有一个线程能获取到锁
-        RLock lock = redissonClient.getLock("user:join_team");
+        // 把key写到常量类里，统一管理（todo）
+        RLock lock = redissonClient.getLock("user:join_team:lock:{teamId}");
         try {
-            // 抢到锁并执行
+            // 保证所有的线程都能抢到锁并执行
+            // todo 对抢锁的次数进行计数限制，重试次数 ，但是现在这个锁的粒度太大了（怎么保证互不相干的用户同时加入队伍）
+            int i = 0;
             while (true) {
+                i++;
+                if (i > 5) {
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "抢锁频繁操作");
+                }
                 if (lock.tryLock(0, -1, TimeUnit.MILLISECONDS)) {
                     System.out.println("getLock: " + Thread.currentThread().getId());
                 }
@@ -348,10 +355,11 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team> implements Te
                 userTeam.setTeamId(teamId);
                 userTeam.setJoinTime(new Date());
                 return userTeamService.save(userTeam);
+
             }
         } catch (
                 InterruptedException e) {
-            log.error("doCacheRecommendUser error", e);
+            log.error("doUserJoinTeamLock error", e);
             return false;
         } finally {
             // 只能释放自己的锁
